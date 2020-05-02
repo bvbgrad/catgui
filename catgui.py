@@ -1,20 +1,12 @@
 import argparse
-import sys
 
-import PySimpleGUI as sg
-
-from pathlib import Path
 from catguiAuxPkg import catguiMenu
 
 
 def main():
     args = getargs()
 
-    script_name = Path(sys.argv[0]).stem
-    options_text = f"{script_name} options:\n  {args}"
-    sg.popup(options_text, title=script_name)
-
-    catguiMenu.menu(script_name)
+    catguiMenu.menu(args)
 
 
 def getargs():
