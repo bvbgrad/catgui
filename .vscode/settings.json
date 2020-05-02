@@ -1,0 +1,7 @@
+{
+    "python.pythonPath": "venvgui\\Scripts\\python.exe",
+    "python.linting.pylintEnabled": false,
+    "python.linting.mypyEnabled": true,
+    "python.linting.pydocstyleEnabled": false,
+    "python.linting.enabled": true
+}
