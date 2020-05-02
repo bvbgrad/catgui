@@ -4,8 +4,7 @@ import sys
 import PySimpleGUI as sg
 
 
-def menu(args):
-    print("Menu entry point")
+def menu(__author__, __version__, args):
     
     sg.ChangeLookAndFeel('LightGreen')
     sg.SetOptions(element_padding=(0, 0))
@@ -33,8 +32,11 @@ def menu(args):
         print('Button = ', event)
         # ------ Process menu choices ------ #
         if event == 'About...':
-            options_text = f"{script_name} options:\n  {args}"
-            sg.popup(options_text, title=script_name)
+            about_text = f"{script_name} v{__version__} (c) 2020\nAuthor: {__author__}\nOptions:" \
+                f"\n  {args}"
+            sg.popup(about_text, title=script_name)
         elif event == 'Open':
-            filename = sg.popup_get_file('file to open', no_window=True)
-            print(filename)
+            folder_name = sg.popup_get_folder('Starting folder', no_window=True)
+            print(folder_name)
+
+    window.close()
