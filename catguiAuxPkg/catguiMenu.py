@@ -1,9 +1,19 @@
 import datetime
 from pathlib import Path
 import sys
+import typing
 
 import PySimpleGUI as sg
 
+RESET_ARCHIVE_FLAG = 'reset archive flag'
+SCAN_START_DATE = 'scan start date'
+scan_parameters: typing.Dict[str, str] = {}
+
+def update_scan_parameters(window, key, value):
+    scan_parameters[key] = value
+    if window: 
+        print(value)
+        window['status'](f"Parameters: {scan_parameters}")
 
 def menu(author, version, args):
     
@@ -12,13 +22,17 @@ def menu(author, version, args):
 
     # ------ Menu Definition ------ #
     menu_def = [['File', ['Open', 'Save', 'Exit'  ]],
-                ['Scan', ['Since...', 'Archive flag', ['Reset', 'Not reset']], ],
+                ['Scan', ['Since...', 'Archive flag', ['Reset', 'No change'], 'Scan'], ],
                 ['Help', 'About...'], ]
 
     # ------ GUI Defintion ------ #
+    scan_parameters = {}
+    update_scan_parameters(None, RESET_ARCHIVE_FLAG, True)
+    
     layout = [
         [sg.Menu(menu_def, )],
-        [sg.Output(size=(60, 20))] ]
+        [sg.Output(size=(60, 20))],
+        [sg.Text(f"Parameters: {scan_parameters}", key='status', size=(60,1))] ]
 
     script_name = Path(sys.argv[0]).stem
     window = sg.Window(script_name, layout, default_element_size=(12, 1), 
@@ -39,6 +53,10 @@ def menu(author, version, args):
         elif event == 'Open':
             folder_name = sg.popup_get_folder('Starting folder', no_window=True)
             print(folder_name)
+        elif event == 'Reset':
+            update_scan_parameters(window, RESET_ARCHIVE_FLAG, True)
+        elif event == 'No change':
+            update_scan_parameters(window, RESET_ARCHIVE_FLAG, False)
         elif event == 'Since...':
             date30 = datetime.datetime.today() - datetime.timedelta(days=30)
             date = date30.strftime("%Y-%m-%d")
@@ -54,7 +72,6 @@ def menu(author, version, args):
             if calendar_event == 'Ok':
                 date = calendar_values['input'][:10]
                 calendar_window.close() 
-            print(date)
-
+            update_scan_parameters(window, SCAN_START_DATE, date)
 
     window.close()
