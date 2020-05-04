@@ -8,7 +8,8 @@ import PySimpleGUI as sg
 
 RESET_ARCHIVE_FLAG = 'reset_archive_flag'
 SCAN_START_DATE = 'scan_start_date'
-TOP_FOLDER_NAME = 'top_folder'
+START_FOLDER_NAME = 'start_folder'
+TARGET_FOLDER_NAME = 'target_folder'
 scan_parameters: typing.Dict[str, str] = {}
 
 LOGGER_NAME = "catgui"
@@ -19,8 +20,10 @@ def update_scan_parameters(window, key, value):
     
     scan_parameters[key] = value
     if window: 
-        print(value)
-        window['status'](f"Parameters: {scan_parameters}")
+        window['status'](f"New parameter: {key}:{value}")
+        print(f"Parameters: ")
+        for parameter_key in sorted(scan_parameters):
+            print(f"\t{parameter_key}:{scan_parameters[parameter_key]}")
 
 def menu(author, version, args):
     logger.info("menu()")
@@ -29,18 +32,26 @@ def menu(author, version, args):
     sg.SetOptions(element_padding=(0, 0))
 
     # ------ Menu Definition ------ #
-    menu_def = [['File', ['Open', 'Save', 'Exit'  ]],
-                ['Scan', ['Since...', 'Archive flag', ['Reset', 'No change'], 'Scan'], ],
-                ['Help', 'About...'], ]
+    menu_def = [['File', 
+                    ['Open', 'Save', 'Exit'  ]
+                ],
+                ['Scan', 
+                    ['Folders', ['Start folder', 'Target folder'],
+                    'Since...', 
+                    'Archive flag', ['Reset', 'No change'], 
+                    'Scan'
+                    ], 
+                ],
+                ['Help', 'About...'], 
+                ]
 
     # ------ GUI Defintion ------ #
-    scan_parameters = {}
     update_scan_parameters(None, RESET_ARCHIVE_FLAG, True)
     
     layout = [
         [sg.Menu(menu_def, )],
         [sg.Output(size=(60, 20))],
-        [sg.Text(f"Parameters: {scan_parameters}", key='status', size=(60,1))] ]
+        [sg.Text(f"Options: {args}", key='status', size=(60,1))] ]
 
     script_name = Path(sys.argv[0]).stem
     window = sg.Window(script_name, layout, default_element_size=(12, 1), 
@@ -52,15 +63,18 @@ def menu(author, version, args):
         event, values = window.read()
         if event == None or event == 'Exit':
             break
-        print('Button = ', event)
+        print('Menu item = ', event)
         # ------ Process menu choices ------ #
         if event == 'About...':
             about_text = f"{script_name} v{version} (c) 2020\nAuthor: {author}\nOptions:" \
                 f"\n  {args}"
             sg.popup(about_text, title=script_name)
-        elif event == 'Open':
+        elif event == 'Start folder':
             folder_name = sg.popup_get_folder('Starting folder', no_window=True)
-            update_scan_parameters(window, TOP_FOLDER_NAME, folder_name)
+            update_scan_parameters(window, START_FOLDER_NAME, folder_name)
+        elif event == 'Target folder':
+            folder_name = sg.popup_get_folder('Backup folder', no_window=True)
+            update_scan_parameters(window, TARGET_FOLDER_NAME, folder_name)
         elif event == 'Reset':
             update_scan_parameters(window, RESET_ARCHIVE_FLAG, True)
         elif event == 'No change':
