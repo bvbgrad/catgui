@@ -8,7 +8,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 import sys
 
-from catguiAuxPkg import catguiMenu
+from catguiPkg import catguiMenu
 
 LOGGER_NAME = "catgui"
 logger = logging.getLogger(LOGGER_NAME)
