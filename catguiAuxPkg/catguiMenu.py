@@ -1,4 +1,5 @@
 import datetime
+import logging
 from pathlib import Path
 import sys
 import typing
@@ -9,14 +10,20 @@ RESET_ARCHIVE_FLAG = 'reset archive flag'
 SCAN_START_DATE = 'scan start date'
 scan_parameters: typing.Dict[str, str] = {}
 
+LOGGER_NAME = "catgui"
+logger = logging.getLogger(LOGGER_NAME)
+
 def update_scan_parameters(window, key, value):
+    logger.info("update_scan_parameters()")
+    
     scan_parameters[key] = value
     if window: 
         print(value)
         window['status'](f"Parameters: {scan_parameters}")
 
 def menu(author, version, args):
-    
+    logger.info("menu()")
+
     sg.ChangeLookAndFeel('LightGreen')
     sg.SetOptions(element_padding=(0, 0))
 
