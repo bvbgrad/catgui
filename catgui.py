@@ -46,7 +46,7 @@ def setup_logging():
     ch.setLevel(logging.INFO)
     # create formatter and add it to the handlers
     formatter = logging.Formatter(
-        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]')
+        '%(asctime)s %(levelname)s: %(message)s [%(pathname)s:%(lineno)d]')
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)
     # add the handlers to the logger

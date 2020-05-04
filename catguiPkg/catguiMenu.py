@@ -6,15 +6,16 @@ import typing
 
 import PySimpleGUI as sg
 
-RESET_ARCHIVE_FLAG = 'reset archive flag'
-SCAN_START_DATE = 'scan start date'
+RESET_ARCHIVE_FLAG = 'reset_archive_flag'
+SCAN_START_DATE = 'scan_start_date'
+TOP_FOLDER_NAME = 'top_folder'
 scan_parameters: typing.Dict[str, str] = {}
 
 LOGGER_NAME = "catgui"
 logger = logging.getLogger(LOGGER_NAME)
 
 def update_scan_parameters(window, key, value):
-    logger.info("update_scan_parameters()")
+    logger.info(f"update_scan_parameters({key}:{value})")
     
     scan_parameters[key] = value
     if window: 
@@ -59,26 +60,34 @@ def menu(author, version, args):
             sg.popup(about_text, title=script_name)
         elif event == 'Open':
             folder_name = sg.popup_get_folder('Starting folder', no_window=True)
-            print(folder_name)
+            update_scan_parameters(window, TOP_FOLDER_NAME, folder_name)
         elif event == 'Reset':
             update_scan_parameters(window, RESET_ARCHIVE_FLAG, True)
         elif event == 'No change':
             update_scan_parameters(window, RESET_ARCHIVE_FLAG, False)
         elif event == 'Since...':
-            date30 = datetime.datetime.today() - datetime.timedelta(days=30)
-            date = date30.strftime("%Y-%m-%d")
-            layout = [[sg.In(date, size=(20,1), key='input')],
-                    [sg.CalendarButton('Choose Date', target='input', key='date', 
-                        default_date_m_d_y=(date30.month, date30.day, date30.year),
-                        button_color=('black','lightblue'), 
-                        tooltip='Default is 30 days prior to today.')],
-                    [sg.Ok(key='Ok')]]
-
-            calendar_window = sg.Window('Calendar', grab_anywhere=False, ).Layout(layout)
-            calendar_event,calendar_values = calendar_window.Read()
-            if calendar_event == 'Ok':
-                date = calendar_values['input'][:10]
-                calendar_window.close() 
+            date = get_scan_date()
             update_scan_parameters(window, SCAN_START_DATE, date)
 
+    logger.info("exit menu()")
     window.close()
+
+
+def get_scan_date():
+    logger.info("get_scan_date()")
+    date30 = datetime.datetime.today() - datetime.timedelta(days=30)
+    date = date30.strftime("%Y-%m-%d")
+    layout = [[sg.In(date, size=(20,1), key='input')],
+            [sg.CalendarButton('Choose Date', target='input', key='date', 
+                default_date_m_d_y=(date30.month, date30.day, date30.year),
+                button_color=('black','lightblue'), 
+                tooltip='Default is 30 days prior to today.')],
+            [sg.Ok(key='Ok')]]
+
+    calendar_window = sg.Window('Calendar', grab_anywhere=False, ).Layout(layout)
+    calendar_event,calendar_values = calendar_window.Read()
+    if calendar_event == 'Ok':
+        date = calendar_values['input'][:10]
+        calendar_window.close()
+    
+    return date
