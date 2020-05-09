@@ -19,11 +19,12 @@ logger = logging.getLogger(LOGGER_NAME)
 
 def update_scan_parameters(window, key, value):
     logger.info(f"update_scan_parameters({key}:{value})")
+    args = catgui.getargs()
     
     scan_parameters[key] = value
     if window: 
         window['status'](f"New parameter: {key}:{value}")
-        print_scan_parameters()
+        if args.verbose: print_scan_parameters()
 
 def print_scan_parameters():
     print(f"Current parameters list: ")
@@ -34,7 +35,7 @@ def print_scan_parameters():
 def menu(author, version):
     logger.info("menu()")
     args = catgui.getargs()
-
+    
     sg.ChangeLookAndFeel('LightGreen')
     sg.SetOptions(element_padding=(0, 0))
 
@@ -70,7 +71,7 @@ def menu(author, version):
         event, values = window.read()
         if event == None or event == 'Exit':
             break
-        print('Menu item = ', event)
+        if args.verbose: print('Menu item = ', event)
         # ------ Process menu choices ------ #
         if event == 'About...':
             about_text = f"{script_name} v{version} (c) 2020\nAuthor: {author}\nOptions:" \
@@ -127,6 +128,8 @@ def start_scan(window):
     if TARGET_FOLDER_NAME not in scan_parameters:
         print(f"\tMissing '{TARGET_FOLDER_NAME}'")
         _scan = False
+
+    # run the scan if all required scan parameters are available
     if _scan:
         print("Start scan for archived files")
         catguiArchiveFiles.scan_files(window, scan_parameters)

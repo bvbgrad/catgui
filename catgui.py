@@ -23,7 +23,7 @@ def getargs():
     logger.info("getargs()")
     parser = argparse.ArgumentParser(
         description="A collection of disk file cataloging functions")
-    parser.add_argument('-v', '--verbose', default=False,
+    parser.add_argument('-v', '--verbose', default=False, action="store_true",
         help='Provide detailed information')
     parser.add_argument('--version', action='version', version='%(prog)s {version}')
     args = parser.parse_args()
