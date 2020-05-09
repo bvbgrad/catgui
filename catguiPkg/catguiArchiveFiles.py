@@ -1,4 +1,6 @@
+import datetime
 import logging
+import os
 
 from pathlib import Path
 
@@ -18,9 +20,21 @@ def scan_files(window, scan_parameters):
     for parameter_key in sorted(scan_parameters):
         print(f"\t{parameter_key}:{scan_parameters[parameter_key]}")
 
-    i = 0
-    for path in Path(scan_parameters['start_folder']).rglob('*'):
-        i += 1
-        if args.verbose: print(f"File {i}: {path}")
+    number_files = 0
+    start_path = Path(scan_parameters['start_folder'])
+    start_dir = Path(start_path)
+    if args.verbose: 
+        print(f"Start Directory: {start_dir}")
+        print("\tFile# size created modified Name")
 
-    print(f"Found {i} files")
+    for path in Path(scan_parameters['start_folder']).rglob('*'):
+        if path.parent != start_dir:
+            start_dir = path.parent
+            print(f"Directory change: {start_dir}")
+        if (os.path.isfile(path)):
+            number_files += 1
+            st = os.stat(path)
+            if args.verbose:
+                    print(f"\t{number_files}: {st.st_size} {st.st_ctime} {st.st_mtime} {path.name}")
+
+    print(f"Found {number_files} files")
