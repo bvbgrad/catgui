@@ -1,7 +1,13 @@
 {
     "python.pythonPath": "venvgui\\Scripts\\python.exe",
     "python.linting.pylintEnabled": false,
-    "python.linting.mypyEnabled": true,
+    "python.linting.mypyEnabled": false,
     "python.linting.pydocstyleEnabled": false,
-    "python.linting.enabled": true
+    "python.linting.enabled": false,
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.pytestEnabled": true
 }

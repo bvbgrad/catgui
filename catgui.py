@@ -15,9 +15,8 @@ logger = logging.getLogger(LOGGER_NAME)
 
 def main():
     logger.info("main()")
-    args = getargs()
 
-    catguiMenu.menu(author, version, args)
+    catguiMenu.menu(author, version)
 
 
 def getargs():

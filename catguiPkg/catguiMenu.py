@@ -5,6 +5,7 @@ import sys
 import typing
 
 import PySimpleGUI as sg
+import catgui
 from catguiPkg import catguiArchiveFiles
 
 RESET_ARCHIVE_FLAG = 'reset_archive_flag'
@@ -30,8 +31,9 @@ def print_scan_parameters():
         print(f"\t{parameter_key}:{scan_parameters[parameter_key]}")
 
 
-def menu(author, version, args):
+def menu(author, version):
     logger.info("menu()")
+    args = catgui.getargs()
 
     sg.ChangeLookAndFeel('LightGreen')
     sg.SetOptions(element_padding=(0, 0))
@@ -127,7 +129,7 @@ def start_scan(window):
         _scan = False
     if _scan:
         print("Start scan for archived files")
-        catguiArchiveFiles.archive_scan_files(window, scan_parameters)
+        catguiArchiveFiles.scan_files(window, scan_parameters)
     else:
         print("Missing one or more scan parameters.")
         print_scan_parameters()
