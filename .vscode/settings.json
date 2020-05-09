@@ -5,7 +5,8 @@
     "python.linting.pydocstyleEnabled": false,
     "python.linting.enabled": false,
     "python.testing.pytestArgs": [
-        "tests"
+        "tests",
+        "--ignore=tests/test_catguiMenu.py"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.nosetestsEnabled": false,
