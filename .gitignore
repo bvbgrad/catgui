@@ -25,3 +25,4 @@ logs/
 *.xlsx
 temp.txt
 *.csv
+catgui_config_file.json

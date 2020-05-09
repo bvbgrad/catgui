@@ -1,21 +1,50 @@
 import datetime
+import json
 import logging
-from pathlib import Path
+import os
 import sys
 import typing
 
+from pathlib import Path
+
 import PySimpleGUI as sg
+
 import catgui
 from catguiPkg import catguiArchiveFiles
 
-RESET_ARCHIVE_FLAG = 'reset_archive_flag'
+SAVE_FILES_FLAG = 'save_files_flag'
 SCAN_START_DATE = 'scan_start_date'
 START_FOLDER_NAME = 'start_folder'
 TARGET_FOLDER_NAME = 'target_folder'
-scan_parameters: typing.Dict[str, str] = {}
+scan_parameters = {SAVE_FILES_FLAG:False}
+
+SCAN_PARAMETERS_FILE = 'catgui_config_file.json'
 
 LOGGER_NAME = "catgui"
 logger = logging.getLogger(LOGGER_NAME)
+
+
+def load_scan_parameters():
+    logger.info(f"load_scan_parameters()")
+    global scan_parameters
+
+    if os.path.exists(SCAN_PARAMETERS_FILE):
+        try:
+            with open(SCAN_PARAMETERS_FILE, 'r') as file:
+                scan_parameters = json.load(file)
+        except Exception as e:
+            logger.info("Initializing default scan parameters")
+            sg.popup_quick_message(f'exception {e}', 
+                'No parameters file found... will use default settings', 
+                keep_on_top=True, background_color='red', text_color='white')
+
+def save_scan_parameters():
+    logger.info(f"save_scan_parameters()")
+
+    json_parameters = json.dumps(scan_parameters)
+    with open(SCAN_PARAMETERS_FILE, "w") as fileout:
+        fileout.write(json_parameters)
+
 
 def update_scan_parameters(window, key, value):
     logger.info(f"update_scan_parameters({key}:{value})")
@@ -35,6 +64,8 @@ def print_scan_parameters():
 def menu(author, version):
     logger.info("menu()")
     args = catgui.getargs()
+
+    load_scan_parameters()
     
     sg.ChangeLookAndFeel('LightGreen')
     sg.SetOptions(element_padding=(0, 0))
@@ -46,16 +77,14 @@ def menu(author, version):
                 ['Scan', 
                     ['Folders', ['Start folder', 'Target folder'],
                     'Since...', 
-                    'Archive flag', ['Reset', 'No change'], 
+                    'Save files', ['Save', 'No save'], 
                     'Start scan'
                     ], 
                 ],
                 ['Help', 'About...'], 
                 ]
 
-    # ------ GUI Defintion ------ #
-    update_scan_parameters(None, RESET_ARCHIVE_FLAG, True)
-    
+    # ------ GUI Defintion ------ #    
     layout = [
         [sg.Menu(menu_def, )],
         [sg.Output(size=(60, 20))],
@@ -83,10 +112,10 @@ def menu(author, version):
         elif event == 'Target folder':
             folder_name = sg.popup_get_folder('Backup folder', no_window=True)
             update_scan_parameters(window, TARGET_FOLDER_NAME, folder_name)
-        elif event == 'Reset':
-            update_scan_parameters(window, RESET_ARCHIVE_FLAG, True)
-        elif event == 'No change':
-            update_scan_parameters(window, RESET_ARCHIVE_FLAG, False)
+        elif event == 'Save':
+            update_scan_parameters(window, SAVE_FILES_FLAG, True)
+        elif event == 'No save':
+            update_scan_parameters(window, SAVE_FILES_FLAG, False)
         elif event == 'Since...':
             date = get_scan_date()
             update_scan_parameters(window, SCAN_START_DATE, date)
@@ -95,6 +124,7 @@ def menu(author, version):
  
     logger.info("exit menu()")
     window.close()
+    save_scan_parameters()
 
 
 def get_scan_date():
@@ -125,14 +155,16 @@ def start_scan(window):
     if START_FOLDER_NAME not in scan_parameters:
         print(f"\tMissing '{START_FOLDER_NAME}'")
         _scan = False
-    if TARGET_FOLDER_NAME not in scan_parameters:
+    if (scan_parameters[SAVE_FILES_FLAG]) and (TARGET_FOLDER_NAME not in scan_parameters):
         print(f"\tMissing '{TARGET_FOLDER_NAME}'")
         _scan = False
 
     # run the scan if all required scan parameters are available
     if _scan:
-        print("Start scan for archived files")
-        catguiArchiveFiles.scan_files(window, scan_parameters)
+        event = sg.popup_yes_no(f"Scan parameters are: {scan_parameters}", title="Start scan?")
+        if event == 'Yes':
+            print("Start scan for archived files")
+            catguiArchiveFiles.scan_files(window, scan_parameters)
     else:
         print("Missing one or more scan parameters.")
         print_scan_parameters()

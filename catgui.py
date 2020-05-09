@@ -38,7 +38,7 @@ def setup_logging():
     logger.setLevel(logging.INFO)
 
     # create file handler which logs even debug messages
-    fh = RotatingFileHandler(f"logs/{LOGGER_NAME}.log", maxBytes=10240, backupCount=10)
+    fh = RotatingFileHandler(f"logs/{LOGGER_NAME}.log", maxBytes=1000000, backupCount=10)
     fh.setLevel(logging.DEBUG)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
