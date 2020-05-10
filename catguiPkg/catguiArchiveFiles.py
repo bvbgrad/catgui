@@ -21,6 +21,10 @@ def scan_files(window, scan_parameters):
         print(f"\t{parameter_key}:{scan_parameters[parameter_key]}")
 
     number_files = 0
+    number_save = 0
+    number_ignore = 0
+    DATE_FORMAT = "%Y-%m-%d"
+    scan_start_time = datetime.datetime.strptime(scan_parameters['scan_start_date'], DATE_FORMAT)
     start_path = Path(scan_parameters['start_folder'])
     start_dir = Path(start_path)
     if args.verbose: 
@@ -34,7 +38,16 @@ def scan_files(window, scan_parameters):
         if (os.path.isfile(path)):
             number_files += 1
             st = os.stat(path)
-            if args.verbose:
-                    print(f"\t{number_files}: {st.st_size} {st.st_ctime} {st.st_mtime} {path.name}")
+            create_date = datetime.datetime.fromtimestamp(st.st_ctime).strftime(DATE_FORMAT)
+            mod_date_time = datetime.datetime.fromtimestamp(st.st_mtime)
+            mod_date = mod_date_time.strftime(DATE_FORMAT)
+            if scan_start_time < mod_date_time:
+                number_save += 1
+                if args.verbose: print(f"\t{number_files}: {st.st_size} {create_date} {mod_date} {path.name}")
+            else:
+                number_ignore += 1
+                        
 
-    print(f"Found {number_files} files")
+    print(f"Total files found {number_files}")
+    print(f"  Number of modified files since the scan date {number_save}")
+    print(f"  Number of files last modified before the scan date {number_ignore}")
