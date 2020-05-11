@@ -52,12 +52,12 @@ def setup_logging():
     logger.addHandler(fh)
     logger.addHandler(ch)
 
-    logger.info(f"setup_logging() {LOGGER_NAME} logging initiated")
+    logger.info(f"setup_logging(): {LOGGER_NAME} logging initiated")
 
-    logger.debug('debug message')
-    logger.warning('warn message')
-    logger.error('error message')
-    logger.critical('critical message')
+    logger.debug('example debug message')
+    logger.warning('example warn message')
+    logger.error('example error message')
+    logger.critical('example critical message')
 
 
 if __name__ == "__main__":

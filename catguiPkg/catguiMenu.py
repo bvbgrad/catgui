@@ -122,9 +122,9 @@ def menu(author, version):
         elif event == 'Start scan':
             start_scan(window)
  
-    logger.info("exit menu()")
-    window.close()
+    window.close() ; del window
     save_scan_parameters()
+    logger.info("exit menu()")
 
 
 def get_scan_date():
@@ -164,7 +164,7 @@ def start_scan(window):
         event = sg.popup_yes_no(f"Scan parameters are: {scan_parameters}", title="Start scan?")
         if event == 'Yes':
             print("Start scan for archived files")
-            catguiArchiveFiles.scan_files(window, scan_parameters)
+            catguiArchiveFiles.scan_files(scan_parameters)
     else:
         print("Missing one or more scan parameters.")
         print_scan_parameters()

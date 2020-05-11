@@ -11,9 +11,8 @@ LOGGER_NAME = "catgui"
 logger = logging.getLogger(LOGGER_NAME)
 
 
-def scan_files(window, scan_parameters):
+def scan_files(scan_parameters):
     logger.info(f"archive_scan_files()")
-
 
     args = catgui.getargs()
     if args.verbose: print(f"Options: {args}")
@@ -22,17 +21,86 @@ def scan_files(window, scan_parameters):
 
     ws1 = wb.active
     ws1.title = 'Summary'
-    
 
     ws1['A1']= f"Scan summary "
     for parameter_key in sorted(scan_parameters):
         ws1.append((parameter_key, scan_parameters[parameter_key]))
+
+    save2(args, wb, scan_parameters)
+    summary = save3(args, wb, scan_parameters)
+
+    for summary_key in summary:
+        ws1.append((summary_key, summary[summary_key]))
+    # ws1.append(summary)
+
+    filename = f'backup_scan_{datetime.datetime.now().strftime("%Y%m%dt%H%M%S")}.xlsx'
+    if 'target_folder' in scan_parameters:
+        filepath = Path(scan_parameters['target_folder'], filename)
+        wb.save(filepath)
+        logger.info(f"Scan summary saved: {filepath}")
+
+    wb.close()
+
+
+def file_survey(start_path):
+    logger.info("file_survey()")
+    
+    excludelist = ('venv', 'RECYCLE')
+    filelist = []
+    for row in os.walk(start_path):
+        for filename in row[2]: #row[2] is a tuple of the filenames
+            full_path: Path = Path(row[0] / Path(filename)) # row[0] is the parent directory
+            st = os.stat(full_path)
+            filelist.append([row[0], filename, st.st_size, st.st_mtime, st.st_ctime])
+    
+    print(f"number of files scanned = {len(filelist)}")
+    excluded_count = 0
+    keeplist = []
+    for file_object in filelist:
+        _exclude = False
+        for item in excludelist:
+            if item in file_object[0]:
+                _exclude = True
+        if _exclude:
+            excluded_count += 1
+        else:
+            keeplist.append(file_object)
+        
+    print(f"number of excluded entries {excluded_count}")
+    print(f"number after excluded entries {len(keeplist)}")
+
+    return keeplist
+
+
+def save2(args, wb, scan_parameters):
+    logger.info("save2()")
 
     ws2 = wb.create_sheet('Files')
     header_row = ('Directory', 'Filename', 'size', 'created', 'modified', 'md5')
     ws2.append(header_row)
     ws2.auto_filter.ref = "A:F"
     ws2.freeze_panes = "B2"
+
+    filelist = file_survey(scan_parameters['start_folder'])
+    print(f"Remaining files w/o excluded directories: {len(filelist)}")
+
+
+    summary = {
+    # 'total files': number_files,
+    # 'Modified files': number_save, 
+    # 'Ignored': number_ignore
+    }
+
+    return summary
+
+def save3(args, wb, scan_parameters):
+    logger.info("save3()")
+
+    ws3 = wb.create_sheet('Files')
+    header_row = ('Directory', 'Filename', 'size', 'created', 'modified', 'md5')
+    ws3.append(header_row)
+    ws3.auto_filter.ref = "A:F"
+    ws3.freeze_panes = "B2"
 
     number_files = 0
     number_save = 0
@@ -58,33 +126,23 @@ def scan_files(window, scan_parameters):
                 number_save += 1
 
                 t = (f"{path.parent}", path.name, st.st_size, 
-                datetime.datetime.fromtimestamp(st.st_mtime), 
-                datetime.datetime.fromtimestamp(st.st_ctime))
-                ws2.append(t)
+                    datetime.datetime.fromtimestamp(st.st_ctime), 
+                    datetime.datetime.fromtimestamp(st.st_mtime))
+                ws3.append(t)
 
                 if args.verbose: 
                     print(f"\t{number_files}: {st.st_size} {create_date} {mod_date} {path.name}")
             else:
                 number_ignore += 1
 
-    print(f"Total files found {number_files}")
+    print(f"Total files processed {number_files}")
     print(f"  Number of modified files since the scan date {number_save}")
-    print(f"  Number of files last modified before the scan date {number_ignore}")
+    print(f"  Number of files ignored {number_ignore}")
 
     summary = {
-        'total files': number_files,
-        'Modified files': number_save, 
-        'Ignored': number_ignore
-        }
-    for summary_key in summary:
-        ws1.append((summary_key, summary[summary_key]))
-    # ws1.append(summary)
+    'total files': number_files,
+    'Modified files': number_save, 
+    'Ignored': number_ignore
+    }
 
-    filename = f'backup_scan_{datetime.datetime.now().strftime("%Y%m%dt%H%M%S")}.xlsx'
-    if 'target_folder' in scan_parameters:
-        filepath = Path(scan_parameters['target_folder'], filename)
-        wb.save(filepath)
-        logger.info(f"Scan summary saved: {filepath}")
-
-    wb.close()
-    
+    return summary
