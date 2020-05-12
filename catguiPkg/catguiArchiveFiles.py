@@ -26,12 +26,10 @@ def scan_files(scan_parameters):
     for parameter_key in sorted(scan_parameters):
         ws1.append((parameter_key, scan_parameters[parameter_key]))
 
-    save2(args, wb, scan_parameters)
-    summary = save3(args, wb, scan_parameters)
+    summary = save2(args, wb, scan_parameters)
 
     for summary_key in summary:
         ws1.append((summary_key, summary[summary_key]))
-    # ws1.append(summary)
 
     filename = f'backup_scan_{datetime.datetime.now().strftime("%Y%m%dt%H%M%S")}.xlsx'
     if 'target_folder' in scan_parameters:
@@ -44,14 +42,20 @@ def scan_files(scan_parameters):
 
 def file_survey(start_path):
     logger.info("file_survey()")
-    
-    excludelist = ('venv', 'RECYCLE')
+
+    excludelist = ('venv', '.mypy', '.git', 'build', 
+        'symfony', '.pytest', 'pycache', 'RECYCLE')
     filelist = []
+    ignorelist = []
     for row in os.walk(start_path):
         for filename in row[2]: #row[2] is a tuple of the filenames
             full_path: Path = Path(row[0] / Path(filename)) # row[0] is the parent directory
             st = os.stat(full_path)
-            filelist.append([row[0], filename, st.st_size, st.st_mtime, st.st_ctime])
+            filelist.append([
+                row[0], filename, st.st_size, 
+                datetime.datetime.fromtimestamp(st.st_ctime), 
+                datetime.datetime.fromtimestamp(st.st_mtime)
+            ])
     
     print(f"number of files scanned = {len(filelist)}")
     excluded_count = 0
@@ -63,13 +67,15 @@ def file_survey(start_path):
                 _exclude = True
         if _exclude:
             excluded_count += 1
+            ignorelist.append(file_object)
         else:
             keeplist.append(file_object)
         
-    print(f"number of excluded entries {excluded_count}")
-    print(f"number after excluded entries {len(keeplist)}")
+    print(f"number of ignored entries {excluded_count}")
+    print(f"number of entries retained {len(keeplist)}")
 
-    return keeplist
+    lists = (keeplist, ignorelist)
+    return lists
 
 
 def save2(args, wb, scan_parameters):
@@ -81,26 +87,15 @@ def save2(args, wb, scan_parameters):
     ws2.auto_filter.ref = "A:F"
     ws2.freeze_panes = "B2"
 
-    filelist = file_survey(scan_parameters['start_folder'])
-    print(f"Remaining files w/o excluded directories: {len(filelist)}")
+    ws2d = wb.create_sheet('Ignore')
+    ws2d.append(header_row)
+    ws2d.auto_filter.ref = "A:F"
+    ws2d.freeze_panes = "B2"
 
+    keeplist, ignorelist = file_survey(scan_parameters['start_folder'])
 
-    summary = {
-    # 'total files': number_files,
-    # 'Modified files': number_save, 
-    # 'Ignored': number_ignore
-    }
-
-    return summary
-
-def save3(args, wb, scan_parameters):
-    logger.info("save3()")
-
-    ws3 = wb.create_sheet('Files')
-    header_row = ('Directory', 'Filename', 'size', 'created', 'modified', 'md5')
-    ws3.append(header_row)
-    ws3.auto_filter.ref = "A:F"
-    ws3.freeze_panes = "B2"
+    for file_object in ignorelist: #save those that were ignored in the file survey
+        ws2d.append(file_object)
 
     number_files = 0
     number_save = 0
@@ -108,32 +103,15 @@ def save3(args, wb, scan_parameters):
 
     DATE_FORMAT = "%Y-%m-%d"
     scan_start_time = datetime.datetime.strptime(scan_parameters['scan_start_date'], DATE_FORMAT)
-    start_path = Path(scan_parameters['start_folder'])
-    start_dir = Path(start_path)
-    if args.verbose: print(f"Start Directory: {start_dir}")
 
-    for path in Path(scan_parameters['start_folder']).rglob('*'):
-        if path.parent != start_dir:
-            start_dir = path.parent
-            if args.verbose: print(f"Directory change: {start_dir}")
-        if (os.path.isfile(path)):
-            number_files += 1
-            st = os.stat(path)
-            create_date = datetime.datetime.fromtimestamp(st.st_ctime).strftime(DATE_FORMAT)
-            mod_date_time = datetime.datetime.fromtimestamp(st.st_mtime)
-            mod_date = mod_date_time.strftime(DATE_FORMAT)
-            if scan_start_time < mod_date_time:
-                number_save += 1
-
-                t = (f"{path.parent}", path.name, st.st_size, 
-                    datetime.datetime.fromtimestamp(st.st_ctime), 
-                    datetime.datetime.fromtimestamp(st.st_mtime))
-                ws3.append(t)
-
-                if args.verbose: 
-                    print(f"\t{number_files}: {st.st_size} {create_date} {mod_date} {path.name}")
-            else:
-                number_ignore += 1
+    for file_object in keeplist:
+        number_files += 1
+        if scan_start_time < file_object[3]:
+            number_save += 1
+            ws2.append(file_object)  # save those within the scan period
+        else:
+            ws2d.append(file_object)  # add the rest to ignore tab
+            number_ignore += 1
 
     print(f"Total files processed {number_files}")
     print(f"  Number of modified files since the scan date {number_save}")
