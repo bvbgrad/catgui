@@ -71,15 +71,17 @@ def menu(author, version):
     sg.SetOptions(element_padding=(0, 0))
 
     # ------ Menu Definition ------ #
-    menu_def = [['File', 
-                    ['Open', 'Save', 'Exit'  ]
+    menu_def = [['Files', 
+                    ['Create Backup', 'Review Backups', 'Scan',
+                        ['Folders', ['Start folder', 'Target folder'],
+                        'Since...', 
+                        'Scan Files'
+                        ],
+                    'Exit'
+                    ],
                 ],
-                ['Scan', 
-                    ['Folders', ['Start folder', 'Target folder'],
-                    'Since...', 
-                    'Save files', ['Save', 'No save'], 
-                    'Start scan'
-                    ], 
+                ['Pics',
+                    ['Review Pics','Scan Pics'],
                 ],
                 ['Help', 'About...'], 
                 ]
@@ -101,11 +103,14 @@ def menu(author, version):
         if event == None or event == 'Exit':
             break
         if args.verbose: print('Menu item = ', event)
+        logger.info(f"Menu event: '{event}'")
         # ------ Process menu choices ------ #
         if event == 'About...':
             about_text = f"{script_name} v{version} (c) 2020\nAuthor: {author}\nOptions:" \
                 f"\n  {args}"
             sg.popup(about_text, title=script_name)
+        elif event == 'Create Backup':
+            start_backup()
         elif event == 'Start folder':
             folder_name = sg.popup_get_folder('Starting folder', no_window=True)
             update_scan_parameters(window, START_FOLDER_NAME, folder_name)
@@ -119,7 +124,7 @@ def menu(author, version):
         elif event == 'Since...':
             date = get_scan_date()
             update_scan_parameters(window, SCAN_START_DATE, date)
-        elif event == 'Start scan':
+        elif event == 'Scan Files':
             start_scan(window)
  
     window.close() ; del window
@@ -163,8 +168,20 @@ def start_scan(window):
     if _scan:
         event = sg.popup_yes_no(f"Scan parameters are: {scan_parameters}", title="Start scan?")
         if event == 'Yes':
-            print("Start scan for archived files")
+            print(f"Start scan for modified files")
             catguiArchiveFiles.scan_files(scan_parameters)
     else:
         print("Missing one or more scan parameters.")
         print_scan_parameters()
+
+
+def start_backup():
+    scan_file_name = sg.popup_get_file('Backup Scan File', no_window=True,
+        default_extension='xlsx', file_types=(("xlsx", "*.xlsx"),),
+        initial_folder=scan_parameters[TARGET_FOLDER_NAME])
+    if scan_file_name:
+        print(catguiArchiveFiles.create_backup(scan_file_name))
+    else:
+        sg.popup_quick_message("Please select a spreadsheet containing scan data",
+            auto_close_duration=5, title="Warning", no_titlebar=False,
+            background_color="Yellow")

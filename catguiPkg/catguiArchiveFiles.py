@@ -1,14 +1,50 @@
 import datetime
 import logging
 import os
+import shutil
 
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from pathlib import Path
 
 import catgui
 
 LOGGER_NAME = "catgui"
 logger = logging.getLogger(LOGGER_NAME)
+
+
+def create_backup(scan_file_name):
+    logger.info(f"create_backup({scan_file_name})")
+
+    wb = load_workbook(filename=scan_file_name, read_only=True, data_only=True)
+
+    target_path = ""
+
+    ws_summary = wb["Summary"]
+    for value in ws_summary.iter_rows(min_col=1, max_col=2, values_only=True):
+        print(value)
+        if value[0] == "target_folder":
+            target_path = Path(value[1])
+            print(f"target_path {target_path}")
+
+    if not os.path.isdir(target_path):
+        return ("No target folder")
+
+    files_copied = 0
+    files_processed = 0
+    ws_files = wb["Files"]
+    for value in ws_files.iter_rows(min_row=2, min_col=1, max_col=2, values_only=True):
+        source_file_path = Path(Path(value[0]) / Path(value[1]))
+        destination_file_path = Path(target_path / Path(value[1]))
+        files_processed += 1
+
+        try:
+            shutil.copyfile(source_file_path, destination_file_path)
+            print(f"Copy {source_file_path} to \n\t{destination_file_path}")
+            files_copied += 1
+        except Exception as e:
+            print(e)
+
+    return (f"Copied {files_copied} of {files_processed} files")
 
 
 def scan_files(scan_parameters):
