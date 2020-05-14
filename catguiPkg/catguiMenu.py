@@ -12,11 +12,10 @@ import PySimpleGUI as sg
 import catgui
 from catguiPkg import catguiArchiveFiles
 
-SAVE_FILES_FLAG = 'save_files_flag'
 SCAN_START_DATE = 'scan_start_date'
 START_FOLDER_NAME = 'start_folder'
 TARGET_FOLDER_NAME = 'target_folder'
-scan_parameters = {SAVE_FILES_FLAG:False}
+scan_parameters = {}
 
 SCAN_PARAMETERS_FILE = 'catgui_config_file.json'
 
@@ -117,10 +116,6 @@ def menu(author, version):
         elif event == 'Target folder':
             folder_name = sg.popup_get_folder('Backup folder', no_window=True)
             update_scan_parameters(window, TARGET_FOLDER_NAME, folder_name)
-        elif event == 'Save':
-            update_scan_parameters(window, SAVE_FILES_FLAG, True)
-        elif event == 'No save':
-            update_scan_parameters(window, SAVE_FILES_FLAG, False)
         elif event == 'Since...':
             date = get_scan_date()
             update_scan_parameters(window, SCAN_START_DATE, date)
@@ -160,7 +155,7 @@ def start_scan(window):
     if START_FOLDER_NAME not in scan_parameters:
         print(f"\tMissing '{START_FOLDER_NAME}'")
         _scan = False
-    if (scan_parameters[SAVE_FILES_FLAG]) and (TARGET_FOLDER_NAME not in scan_parameters):
+    if TARGET_FOLDER_NAME not in scan_parameters:
         print(f"\tMissing '{TARGET_FOLDER_NAME}'")
         _scan = False
 

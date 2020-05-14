@@ -110,8 +110,7 @@ def file_survey(start_path):
     print(f"number of ignored entries {excluded_count}")
     print(f"number of entries retained {len(keeplist)}")
 
-    lists = (keeplist, ignorelist)
-    return lists
+    return (keeplist, ignorelist)
 
 
 def save2(args, wb, scan_parameters):
@@ -135,7 +134,9 @@ def save2(args, wb, scan_parameters):
 
     number_files = 0
     number_save = 0
+    size_save = 0
     number_ignore = 0
+    size_ignore = 0
 
     DATE_FORMAT = "%Y-%m-%d"
     scan_start_time = datetime.datetime.strptime(scan_parameters['scan_start_date'], DATE_FORMAT)
@@ -144,19 +145,23 @@ def save2(args, wb, scan_parameters):
         number_files += 1
         if scan_start_time < file_object[3]:
             number_save += 1
+            size_save += file_object[2]
             ws2.append(file_object)  # save those within the scan period
         else:
             ws2d.append(file_object)  # add the rest to ignore tab
             number_ignore += 1
+            size_ignore += file_object[2]
 
     print(f"Total files processed {number_files}")
     print(f"  Number of modified files since the scan date {number_save}")
     print(f"  Number of files ignored {number_ignore}")
 
     summary = {
-    'total files': number_files,
-    'Modified files': number_save, 
-    'Ignored': number_ignore
+    'total files' : number_files,
+    'Modified files' : number_save, 
+    'size_save' : size_save,
+    'Ignored' : number_ignore,
+    'size_ignore' : size_ignore
     }
 
     return summary
