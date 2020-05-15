@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import logging
 import os
 import shutil
@@ -90,7 +91,8 @@ def file_survey(start_path):
             filelist.append([
                 row[0], filename, st.st_size, 
                 datetime.datetime.fromtimestamp(st.st_ctime), 
-                datetime.datetime.fromtimestamp(st.st_mtime)
+                datetime.datetime.fromtimestamp(st.st_mtime),
+                'hash'
             ])
     
     print(f"number of files scanned = {len(filelist)}")
@@ -116,8 +118,9 @@ def file_survey(start_path):
 def save2(args, wb, scan_parameters):
     logger.info("save2()")
 
+    header_row = ('Directory', 'Filename', 'size', 'created', 'modified', 'sha256')
+
     ws2 = wb.create_sheet('Files')
-    header_row = ('Directory', 'Filename', 'size', 'created', 'modified', 'md5')
     ws2.append(header_row)
     ws2.auto_filter.ref = "A:F"
     ws2.freeze_panes = "B2"
@@ -146,6 +149,14 @@ def save2(args, wb, scan_parameters):
         if scan_start_time < file_object[3]:
             number_save += 1
             size_save += file_object[2]
+
+            full_path = Path(file_object[0]) / Path(file_object[1])
+            file_hash = hashlib.sha256()
+            with open(full_path, "rb") as f:
+                while chunk := f.read(8192):
+                    file_hash.update(chunk)
+            file_object[5] = file_hash.hexdigest()
+
             ws2.append(file_object)  # save those within the scan period
         else:
             ws2d.append(file_object)  # add the rest to ignore tab
