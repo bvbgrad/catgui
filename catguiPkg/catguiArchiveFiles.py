@@ -36,11 +36,16 @@ def create_backup(scan_file_name):
     files_copied = 0
     files_processed = 0
     ws_files = wb["Files"]
-    for value in ws_files.iter_rows(min_row=2, min_col=1, max_col=2, values_only=True):
+    for value in ws_files.iter_rows(min_row=2, min_col=1, max_col=6, values_only=True):
         source_file_path = Path(Path(value[0]) / Path(value[1]))
         destination_file_path = Path(target_path / Path(value[1]))
         files_processed += 1
-
+        if os.path.exists(destination_file_path):
+            filename = destination_file_path.stem
+            suffix = destination_file_path.suffix  #append first 5 hash characters
+            adjusted_filename = filename + '(' + value[5][0:5] +')' + suffix 
+            destination_file_path = Path(target_path / adjusted_filename)
+            print(f"duplicate? {destination_file_path}")
         try:
             shutil.copyfile(source_file_path, destination_file_path)
             print(f"Copy {source_file_path} to \n\t{destination_file_path}")
@@ -114,7 +119,7 @@ def file_survey(start_path):
         else:
             keeplist.append(file_object)
         
-    print(f"number of ignored entries {excluded_count}")
+    print(f"number of ignored entries {len(ignorelist)}")
     print(f"number of entries retained {len(keeplist)}")
 
     return (keeplist, ignorelist)
@@ -138,7 +143,8 @@ def save2(args, wb, scan_parameters):
 
     keeplist, ignorelist = file_survey(scan_parameters['start_folder'])
 
-    logger.info(f"Begin data save: {len(keeplist)} files")
+    logger.info(f"Begin data save: keep candidates {len(keeplist)}")
+    logger.info(f"Begin data save: ignore list files {len(ignorelist)}")
     for file_object in ignorelist: #save those that were ignored in the file survey
         ws2d.append(file_object)
 
@@ -153,7 +159,7 @@ def save2(args, wb, scan_parameters):
 
     for file_object in keeplist:
         number_files += 1
-        if scan_start_time < file_object[3]:
+        if scan_start_time < file_object[4]:  #keep files with scan start before modified time
             number_save += 1
             size_save += file_object[2]
 
