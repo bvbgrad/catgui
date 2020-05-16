@@ -9,10 +9,13 @@ from pathlib import Path
 
 import catgui
 
+from catgui import log_wrap
+
 LOGGER_NAME = "catgui"
 logger = logging.getLogger(LOGGER_NAME)
 
 
+@log_wrap
 def create_backup(scan_file_name):
     logger.info(f"create_backup({scan_file_name})")
 
@@ -48,6 +51,7 @@ def create_backup(scan_file_name):
     return (f"Copied {files_copied} of {files_processed} files")
 
 
+@log_wrap
 def scan_files(scan_parameters):
     logger.info(f"archive_scan_files()")
 
@@ -77,10 +81,11 @@ def scan_files(scan_parameters):
     wb.close()
 
 
+@log_wrap
 def file_survey(start_path):
     logger.info("file_survey()")
 
-    excludelist = ('venv', '.mypy', '.git', 'build', 
+    excludelist = ('venv', '.mypy', '.git', 'build', 'Player', 'TNG',
         'symfony', '.pytest', 'pycache', 'RECYCLE')
     filelist = []
     ignorelist = []
@@ -115,6 +120,7 @@ def file_survey(start_path):
     return (keeplist, ignorelist)
 
 
+@log_wrap
 def save2(args, wb, scan_parameters):
     logger.info("save2()")
 
@@ -132,6 +138,7 @@ def save2(args, wb, scan_parameters):
 
     keeplist, ignorelist = file_survey(scan_parameters['start_folder'])
 
+    logger.info(f"Begin data save: {len(keeplist)} files")
     for file_object in ignorelist: #save those that were ignored in the file survey
         ws2d.append(file_object)
 

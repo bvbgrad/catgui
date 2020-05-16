@@ -13,12 +13,23 @@ from catguiPkg import catguiMenu
 LOGGER_NAME = "catgui"
 logger = logging.getLogger(LOGGER_NAME)
 
+
+def log_wrap(func):
+    def wrapped(*args, **kwargs):
+        logger.info(f"enter {func.__name__}()")
+        result = func(*args, **kwargs)
+        logger.info(f"exit {func.__name__}()")
+        return result
+    return wrapped
+
+
+@log_wrap
 def main():
     logger.info("main()")
 
     catguiMenu.menu(author, version)
 
-
+@log_wrap
 def getargs():
     logger.info("getargs()")
     parser = argparse.ArgumentParser(

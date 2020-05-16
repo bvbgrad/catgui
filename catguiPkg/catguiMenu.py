@@ -10,6 +10,8 @@ from pathlib import Path
 import PySimpleGUI as sg
 
 import catgui
+
+from catgui import log_wrap
 from catguiPkg import catguiArchiveFiles
 
 SCAN_START_DATE = 'scan_start_date'
@@ -22,7 +24,7 @@ SCAN_PARAMETERS_FILE = 'catgui_config_file.json'
 LOGGER_NAME = "catgui"
 logger = logging.getLogger(LOGGER_NAME)
 
-
+@log_wrap
 def load_scan_parameters():
     logger.info(f"load_scan_parameters()")
     global scan_parameters
@@ -37,6 +39,8 @@ def load_scan_parameters():
                 'No parameters file found... will use default settings', 
                 keep_on_top=True, background_color='red', text_color='white')
 
+
+@log_wrap
 def save_scan_parameters():
     logger.info(f"save_scan_parameters()")
 
@@ -45,6 +49,7 @@ def save_scan_parameters():
         fileout.write(json_parameters)
 
 
+@log_wrap
 def update_scan_parameters(window, key, value):
     logger.info(f"update_scan_parameters({key}:{value})")
     args = catgui.getargs()
@@ -60,6 +65,7 @@ def print_scan_parameters():
         print(f"\t{parameter_key}:{scan_parameters[parameter_key]}")
 
 
+@log_wrap
 def menu(author, version):
     logger.info("menu()")
     args = catgui.getargs()
@@ -127,6 +133,7 @@ def menu(author, version):
     logger.info("exit menu()")
 
 
+@log_wrap
 def get_scan_date():
     logger.info("get_scan_date()")
     date30 = datetime.datetime.today() - datetime.timedelta(days=30)
@@ -146,6 +153,8 @@ def get_scan_date():
     
     return date
 
+
+@log_wrap
 def start_scan(window):
     logger.info("start_scan()")
     _scan = True
@@ -170,7 +179,9 @@ def start_scan(window):
         print_scan_parameters()
 
 
+@log_wrap
 def start_backup():
+    logger.info("start_backup()")
     scan_file_name = sg.popup_get_file('Backup Scan File', no_window=True,
         default_extension='xlsx', file_types=(("xlsx", "*.xlsx"),),
         initial_folder=scan_parameters[TARGET_FOLDER_NAME])
