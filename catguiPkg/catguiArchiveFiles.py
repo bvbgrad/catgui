@@ -70,7 +70,13 @@ def scan_files(scan_parameters):
 
     ws1['A1']= f"Scan summary "
     for parameter_key in sorted(scan_parameters):
-        ws1.append((parameter_key, scan_parameters[parameter_key]))
+        logger.info(type(scan_parameters[parameter_key]))
+        x = type(scan_parameters[parameter_key])
+        if isinstance(scan_parameters[parameter_key], list):
+            for item in scan_parameters[parameter_key]:
+                ws1.append((parameter_key, item))
+        else:
+            ws1.append((parameter_key, scan_parameters[parameter_key]))
 
     summary = save2(args, wb, scan_parameters)
 
@@ -87,19 +93,18 @@ def scan_files(scan_parameters):
 
 
 @log_wrap
-def file_survey(start_path):
+def file_survey(scan_parameters):
     logger.info("file_survey()")
 
-    excludelist = ('venv', '.mypy', '.git', 'build', 'Player', 'TNG',
-        'symfony', '.pytest', 'pycache', 'RECYCLE')
     filelist = []
     ignorelist = []
-    for row in os.walk(start_path):
-        for filename in row[2]: #row[2] is a tuple of the filenames
-            full_path: Path = Path(row[0] / Path(filename)) # row[0] is the parent directory
+    start_path = scan_parameters['start_folder']
+    for parent, dirs, files in os.walk(start_path):
+        for filename in files: #row[2] is a tuple of the filenames
+            full_path: Path = Path(parent / Path(filename)) # row[0] is the parent directory
             st = os.stat(full_path)
             filelist.append([
-                row[0], filename, st.st_size, 
+                parent, filename, st.st_size, 
                 datetime.datetime.fromtimestamp(st.st_ctime), 
                 datetime.datetime.fromtimestamp(st.st_mtime),
                 'hash'
@@ -110,7 +115,7 @@ def file_survey(start_path):
     keeplist = []
     for file_object in filelist:
         _exclude = False
-        for item in excludelist:
+        for item in scan_parameters["exclude_list"]:
             if item in file_object[0]:
                 _exclude = True
         if _exclude:
@@ -129,7 +134,7 @@ def file_survey(start_path):
 def save2(args, wb, scan_parameters):
     logger.info("save2()")
 
-    header_row = ('Directory', 'Filename', 'size', 'created', 'modified', 'sha256')
+    header_row = ('Directory', 'Filename', 'size', 'created', 'modified', 'blake2')
 
     ws2 = wb.create_sheet('Files')
     ws2.append(header_row)
@@ -141,7 +146,7 @@ def save2(args, wb, scan_parameters):
     ws2d.auto_filter.ref = "A:F"
     ws2d.freeze_panes = "B2"
 
-    keeplist, ignorelist = file_survey(scan_parameters['start_folder'])
+    keeplist, ignorelist = file_survey(scan_parameters)
 
     logger.info(f"Begin data save: keep candidates {len(keeplist)}")
     logger.info(f"Begin data save: ignore list files {len(ignorelist)}")
@@ -164,11 +169,11 @@ def save2(args, wb, scan_parameters):
             size_save += file_object[2]
 
             full_path = Path(file_object[0]) / Path(file_object[1])
-            file_hash = hashlib.sha256()
+            file_hash = hashlib.blake2b()
             with open(full_path, "rb") as f:
                 while chunk := f.read(8192):
                     file_hash.update(chunk)
-            file_object[5] = file_hash.hexdigest()
+            file_object[5] = file_hash.hexdigest()[:20]
 
             ws2.append(file_object)  # save those within the scan period
         else:
@@ -177,7 +182,7 @@ def save2(args, wb, scan_parameters):
             size_ignore += file_object[2]
 
     print(f"Total files processed {number_files}")
-    print(f"  Number of modified files since the scan date {number_save}")
+    print(f"  Number of modified files {number_save}")
     print(f"  Number of files ignored {number_ignore}")
 
     summary = {

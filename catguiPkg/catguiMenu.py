@@ -17,7 +17,10 @@ from catguiPkg import catguiArchiveFiles
 SCAN_START_DATE = 'scan_start_date'
 START_FOLDER_NAME = 'start_folder'
 TARGET_FOLDER_NAME = 'target_folder'
+
 scan_parameters = {}
+default_exclude_list = ["venv", ".mypy", ".git", "build", "Player", "TNG",
+		"symfony", ".pytest", "pycache", "RECYCLE"]
 
 SCAN_PARAMETERS_FILE = 'catgui_config_file.json'
 
@@ -29,15 +32,16 @@ def load_scan_parameters():
     logger.info(f"load_scan_parameters()")
     global scan_parameters
 
-    if os.path.exists(SCAN_PARAMETERS_FILE):
-        try:
-            with open(SCAN_PARAMETERS_FILE, 'r') as file:
-                scan_parameters = json.load(file)
-        except Exception as e:
-            logger.info("Initializing default scan parameters")
-            sg.popup_quick_message(f'exception {e}', 
-                'No parameters file found... will use default settings', 
-                keep_on_top=True, background_color='red', text_color='white')
+    try:
+        with open(SCAN_PARAMETERS_FILE, 'r') as file:
+            scan_parameters = json.load(file)
+    except Exception as e:
+        logger.info("Initializing default scan parameters")
+        sg.popup_quick_message(f'exception {e}', 
+            'No parameters file found... will use default settings', 
+            keep_on_top=True, auto_close_duration=5,
+            background_color='yellow', text_color='black')
+        scan_parameters["exclude_list"] = default_exclude_list
 
 
 @log_wrap
@@ -77,10 +81,10 @@ def menu(author, version):
 
     # ------ Menu Definition ------ #
     menu_def = [['Files', 
-                    ['Create Backup', 'Review Backups', 'Scan',
-                        ['Folders', ['Start folder', 'Target folder'],
-                        'Since...', 
-                        'Scan Files'
+                    ['Backup', 'Duplicates', 'Scan',
+                        ['Folders', ['Source', 'Destination'],
+                        'From (date)', 
+                        'Start scan'
                         ],
                     'Exit'
                     ],
@@ -114,18 +118,18 @@ def menu(author, version):
             about_text = f"{script_name} v{version} (c) 2020\nAuthor: {author}\nOptions:" \
                 f"\n  {args}"
             sg.popup(about_text, title=script_name)
-        elif event == 'Create Backup':
+        elif event == 'Backup':
             start_backup()
-        elif event == 'Start folder':
+        elif event == 'Source':
             folder_name = sg.popup_get_folder('Starting folder', no_window=True)
             update_scan_parameters(window, START_FOLDER_NAME, folder_name)
-        elif event == 'Target folder':
+        elif event == 'Destination':
             folder_name = sg.popup_get_folder('Backup folder', no_window=True)
             update_scan_parameters(window, TARGET_FOLDER_NAME, folder_name)
-        elif event == 'Since...':
+        elif event == 'From (date)':
             date = get_scan_date()
             update_scan_parameters(window, SCAN_START_DATE, date)
-        elif event == 'Scan Files':
+        elif event == 'Start scan':
             start_scan(window)
  
     window.close() ; del window

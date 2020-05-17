@@ -23,6 +23,6 @@ build/
 *.egg-info/
 logs/
 *.xlsx
-temp.txt
+temp/
 *.csv
-catgui_config_file.json
+*.json
