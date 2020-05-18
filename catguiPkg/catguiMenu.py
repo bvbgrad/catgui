@@ -42,6 +42,10 @@ def load_scan_parameters():
             keep_on_top=True, auto_close_duration=5,
             background_color='yellow', text_color='black')
         scan_parameters["exclude_list"] = default_exclude_list
+        scan_parameters[START_FOLDER_NAME] = os.path.curdir
+        scan_parameters[TARGET_FOLDER_NAME] = scan_parameters[START_FOLDER_NAME]
+        date30 = datetime.datetime.today() - datetime.timedelta(days=30)
+        scan_parameters[SCAN_START_DATE] = date30.strftime("%Y-%m-%d")
 
 
 @log_wrap

@@ -6,6 +6,7 @@ import shutil
 
 from openpyxl import Workbook, load_workbook
 from pathlib import Path
+import PySimpleGUI as sg
 
 import catgui
 
@@ -70,8 +71,6 @@ def scan_files(scan_parameters):
 
     ws1['A1']= f"Scan summary "
     for parameter_key in sorted(scan_parameters):
-        logger.info(type(scan_parameters[parameter_key]))
-        x = type(scan_parameters[parameter_key])
         if isinstance(scan_parameters[parameter_key], list):
             for item in scan_parameters[parameter_key]:
                 ws1.append((parameter_key, item))
@@ -141,26 +140,37 @@ def save2(args, wb, scan_parameters):
     ws2.auto_filter.ref = "A:F"
     ws2.freeze_panes = "B2"
 
-    ws2d = wb.create_sheet('Ignore')
+    ws2d = wb.create_sheet('Dups')
     ws2d.append(header_row)
     ws2d.auto_filter.ref = "A:F"
     ws2d.freeze_panes = "B2"
+
+    ws2i = wb.create_sheet('Ignore')
+    ws2i.append(header_row)
+    ws2i.auto_filter.ref = "A:F"
+    ws2i.freeze_panes = "B2"
 
     keeplist, ignorelist = file_survey(scan_parameters)
 
     logger.info(f"Begin data save: keep candidates {len(keeplist)}")
     logger.info(f"Begin data save: ignore list files {len(ignorelist)}")
     for file_object in ignorelist: #save those that were ignored in the file survey
-        ws2d.append(file_object)
+        ws2i.append(file_object)
 
     number_files = 0
     number_save = 0
     size_save = 0
     number_ignore = 0
     size_ignore = 0
+    duplicate_count_list = {}
 
     DATE_FORMAT = "%Y-%m-%d"
     scan_start_time = datetime.datetime.strptime(scan_parameters['scan_start_date'], DATE_FORMAT)
+
+# Compute the hash digest only if a filename concatenated with its file size 
+# is added to the duplicate_list multiple times.
+# This situation indicates the filename is a possible duplicate.
+# Keep the candidate file objects and the number of possible duplications
 
     for file_object in keeplist:
         number_files += 1
@@ -168,16 +178,31 @@ def save2(args, wb, scan_parameters):
             number_save += 1
             size_save += file_object[2]
 
-            full_path = Path(file_object[0]) / Path(file_object[1])
-            file_hash = hashlib.blake2b()
-            with open(full_path, "rb") as f:
-                while chunk := f.read(8192):
-                    file_hash.update(chunk)
-            file_object[5] = file_hash.hexdigest()[:20]
+            filename_size = file_object[1] + str(file_object[2])
+            if filename_size in duplicate_count_list.keys():
+            # try:
+                duplicate_count_list[filename_size] += 1 
+                full_path = Path(file_object[0]) / Path(file_object[1])
+                try:
+                    file_hash = hashlib.blake2b()
+                    with open(full_path, "rb") as f:
+                        while chunk := f.read(8192):
+                            file_hash.update(chunk)
+                    file_object[5] = file_hash.hexdigest()[:20]
+                    ws2d.append(file_object)
+                except PermissionError as e:
+                    sg.popup_quick_message(f'exception {e}', 
+                        'Check if a previous Excel scan file is still open.', 
+                        keep_on_top=True, auto_close_duration=5,
+                        background_color='yellow', text_color='black')
+                    break
+            # except Exception as e:
+            else:
+                duplicate_count_list[filename_size] = 1
 
             ws2.append(file_object)  # save those within the scan period
         else:
-            ws2d.append(file_object)  # add the rest to ignore tab
+            ws2i.append(file_object)  # add the rest to ignore tab
             number_ignore += 1
             size_ignore += file_object[2]
 
@@ -185,12 +210,20 @@ def save2(args, wb, scan_parameters):
     print(f"  Number of modified files {number_save}")
     print(f"  Number of files ignored {number_ignore}")
 
+    duplicates = list(duplicate_count_list.values())
+    duplicate_count = 0
+    for duplicate in duplicates:
+        if duplicate > 1:
+            duplicate_count += 1
+    print(f"  Number of candidate duplicates {duplicate_count}")
+
     summary = {
     'total files' : number_files,
-    'Modified files' : number_save, 
+    'Modified files after scan date' : number_save, 
     'size_save' : size_save,
-    'Ignored' : number_ignore,
-    'size_ignore' : size_ignore
+    'Before scan date (ignored)' : number_ignore,
+    'size_ignore' : size_ignore,
+    'duplicates?' : duplicate_count
     }
 
     return summary
