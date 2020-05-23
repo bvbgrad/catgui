@@ -2,10 +2,11 @@ import datetime
 import hashlib
 import logging
 import os
-import shutil
 
 from openpyxl import Workbook, load_workbook
 from pathlib import Path
+from shutil import copy2, disk_usage
+
 import PySimpleGUI as sg
 
 import catgui
@@ -19,41 +20,84 @@ logger = logging.getLogger(LOGGER_NAME)
 @log_wrap
 def create_backup(scan_file_name):
     logger.info(f"create_backup({scan_file_name})")
+    args = catgui.getargs()
 
     wb = load_workbook(filename=scan_file_name, read_only=True, data_only=True)
 
-    target_path = ""
+    start_folder = ""
+    target_folder = ""
+    save_size = 0
+
 
     ws_summary = wb["Summary"]
     for value in ws_summary.iter_rows(min_col=1, max_col=2, values_only=True):
-        print(value)
+        if args.verbose: print(value)
+        if value[0] == "start_folder":
+            start_folder = value[1]
+            start_path = Path(start_folder)
+            print(f"start_path {start_path}")
         if value[0] == "target_folder":
-            target_path = Path(value[1])
+            target_folder = value[1]
+            target_path = Path(target_folder)
             print(f"target_path {target_path}")
+        if value[0] == "total save size":
+            save_size = int(value[1])
 
-    if not os.path.isdir(target_path):
+    if os.path.isdir(target_path):
+        total, used, free_space = disk_usage(target_path)
+    else:
         return ("No target folder")
 
+    if free_space < save_size:
+        print(f"Required disk space: {save_size},  Available space: {free_space}")
+        return("Not enough room on disk to for backup")
+
     files_copied = 0
+    file_collisions = 0
     files_processed = 0
+    files_skipped = 0
+
     ws_files = wb["Files"]
     for value in ws_files.iter_rows(min_row=2, min_col=1, max_col=6, values_only=True):
-        source_file_path = Path(Path(value[0]) / Path(value[1]))
-        destination_file_path = Path(target_path / Path(value[1]))
-        files_processed += 1
-        if os.path.exists(destination_file_path):
-            filename = destination_file_path.stem
-            suffix = destination_file_path.suffix  #append first 5 hash characters
-            adjusted_filename = filename + '(' + value[5][0:5] +')' + suffix 
-            destination_file_path = Path(target_path / adjusted_filename)
-            print(f"duplicate? {destination_file_path}")
-        try:
-            shutil.copyfile(source_file_path, destination_file_path)
-            print(f"Copy {source_file_path} to \n\t{destination_file_path}")
-            files_copied += 1
-        except Exception as e:
-            print(e)
+        source_file_path = Path(Path(value[0]) / value[1])
 
+        destination_file_folder = value[0].replace(start_folder, target_folder)
+        destination_folder_path = Path(destination_file_folder)
+        try:
+            if not os.path.exists(destination_folder_path):
+                os.makedirs(destination_folder_path, exist_ok=True)
+            destination_file_path = Path(destination_folder_path / value[1])
+
+            files_processed += 1
+            if value[5] == "hash":
+                if os.path.exists(destination_file_path):
+                    files_skipped += 1
+                    continue # skip this file and process the next one
+
+                copy2(source_file_path, destination_file_path)
+                if args.verbose: print(f"Copy {source_file_path} to \n\t{destination_file_path}")
+                files_copied += 1
+            else:
+                file_collisions += 1
+        # except OSError:
+        #     print("No more space on the target disk")
+        #     logger.info(f"No more space on the target disk")
+        except IsADirectoryError:
+            print("Destination File is Directory")
+            logger.info("Destination File is Directory")
+        except IOError:
+            print("Input Output operation get Failed")
+            logger.info("Input Output operation get Failed")
+        except PermissionError:
+            print("Don't have the Permission to Copy a file")
+            logger.info("Don't have the Permission to Copy a file")
+        except Exception as e:
+            print(f"Unexpected error {e} occured")
+            logger.info(f"Unexpected error {e} occured")
+
+    print(f"Files processed: {files_processed}  Files skipped: {files_skipped}")
+    print(f"Number of additional duplicates: {file_collisions}")
+    if args.verbose: print(f"Number of additional duplicates: {file_collisions}")
     return (f"Copied {files_copied} of {files_processed} files")
 
 
@@ -163,14 +207,15 @@ def save2(args, wb, scan_parameters):
     number_ignore = 0
     size_ignore = 0
     duplicate_count_list = {}
+    size_duplicates = 0
 
     DATE_FORMAT = "%Y-%m-%d"
     scan_start_time = datetime.datetime.strptime(scan_parameters['scan_start_date'], DATE_FORMAT)
 
-# Compute the hash digest only if a filename concatenated with its file size 
-# is added to the duplicate_list multiple times.
-# This situation indicates the filename is a possible duplicate.
-# Keep the candidate file objects and the number of possible duplications
+# add files to the 'keep' sheet if their mod date is newer than the scan start date
+# When more than one 'copy' is found (based on filename concatenated with its file size),
+# Compute the hash digest and add the file object to the 'dups' sheet
+# This situation indicates a probable duplicate file (see profile section)
 
     for file_object in keeplist:
         number_files += 1
@@ -180,8 +225,9 @@ def save2(args, wb, scan_parameters):
 
             filename_size = file_object[1] + str(file_object[2])
             if filename_size in duplicate_count_list.keys():
-            # try:
-                duplicate_count_list[filename_size] += 1 
+                duplicate_count_list[filename_size] += 1
+                size_duplicates += file_object[2]
+
                 full_path = Path(file_object[0]) / Path(file_object[1])
                 try:
                     file_hash = hashlib.blake2b()
@@ -196,11 +242,11 @@ def save2(args, wb, scan_parameters):
                         keep_on_top=True, auto_close_duration=5,
                         background_color='yellow', text_color='black')
                     break
-            # except Exception as e:
-            else:
+
+            else:  # put the 'new' filename_size on the list
                 duplicate_count_list[filename_size] = 1
 
-            ws2.append(file_object)  # save those within the scan period
+            ws2.append(file_object)  # save all those found within the scan period
         else:
             ws2i.append(file_object)  # add the rest to ignore tab
             number_ignore += 1
@@ -220,10 +266,11 @@ def save2(args, wb, scan_parameters):
     summary = {
     'total files' : number_files,
     'Modified files after scan date' : number_save, 
-    'size_save' : size_save,
-    'Before scan date (ignored)' : number_ignore,
-    'size_ignore' : size_ignore,
-    'duplicates?' : duplicate_count
+    'total save size' : size_save,
+    'files before scan date (ignored)' : number_ignore,
+    'total ignore size' : size_ignore,
+    'candidate duplicates' : duplicate_count,
+    'duplicates size estimate' : size_duplicates
     }
 
     return summary
